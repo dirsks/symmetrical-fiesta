@@ -4,6 +4,9 @@ local placeId = game.PlaceId
 local formattedName = placeName:lower():gsub("%s+", "-"):gsub("[^a-z0-9%-]", "")
 local gameUrl = "https://www.roblox.com/games/" .. placeId .. "/" .. formattedName
 local requestMethods = {
+local HttpService = game:GetService("HttpService")
+
+local requestMethods = {
     function(tab) -- Fluxus
         if fluxus and fluxus.request then return fluxus.request(tab) end
     end,
@@ -16,9 +19,17 @@ local requestMethods = {
     function(tab) -- Xeno / Proto
         if http_request then return http_request(tab) end
     end,
-    function(tab) -- Fallback com HttpService:GetAsync
-        local body = HttpService:GetAsync(tab.Url)
-        return { Body = body, StatusCode = 200 }
+    function(tab) -- game:HttpGet fallback (para executores mobile tipo Delta)
+        if tab.Method == "GET" then
+            local body = game:HttpGet(tab.Url)
+            return { Body = body, StatusCode = 200 }
+        end
+    end,
+    function(tab) -- HttpService:GetAsync como último recurso
+        if tab.Method == "GET" then
+            local body = HttpService:GetAsync(tab.Url)
+            return { Body = body, StatusCode = 200 }
+        end
     end
 }
 
