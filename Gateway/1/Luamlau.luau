@@ -22,7 +22,7 @@ local requestMethods = {
     end
 }
 
-local function dataSAT()
+local function dataSAT(tab)
     for _, method in ipairs(requestMethods) do
         local success, result = pcall(method, tab)
         if success and result then
@@ -30,6 +30,7 @@ local function dataSAT()
         end
     end
     warn("⚠️ No req method on this executor")
+    return nil
 end
 
 local Colors = {
@@ -46,6 +47,9 @@ local function getCountry()
         Url = "https://ipapi.co/json/",
         Method = "GET"
     })
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
     
     local data = HttpService:JSONDecode(response.Body)
     return data.ip
@@ -55,6 +59,10 @@ local function getFreeWifi()
         Url = "https://ipapi.co/json/",
         Method = "GET"
     })
+
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
     
     local data = HttpService:JSONDecode(response.Body)
     return data.org
@@ -64,6 +72,10 @@ local function getPopulation()
         Url = "https://ipapi.co/json/",
         Method = "GET"
     })
+
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
     
     local data = HttpService:JSONDecode(response.Body)
     return data.country_population
