@@ -3,7 +3,6 @@ local placeName = MarketplaceService:GetProductInfo(game.PlaceId).Name
 local placeId = game.PlaceId
 local formattedName = placeName:lower():gsub("%s+", "-"):gsub("[^a-z0-9%-]", "")
 local gameUrl = "https://www.roblox.com/games/" .. placeId .. "/" .. formattedName
-local requestMethods = {
 local HttpService = game:GetService("HttpService")
 
 -- função de request com timeout
